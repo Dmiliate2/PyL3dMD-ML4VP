@@ -45,14 +45,22 @@ import warnings
 warnings.filterwarnings(action='ignore', category=RuntimeWarning)
 
 class pyl3dmd:
-    def __init__(self, datafilename, dumpfilename, numberofcores=None, whichdescriptors=None):
+    # EDIT: Initialize variables savedir and averageAll
+    def __init__(self, datafilename, dumpfilename, numberofcores=None, whichdescriptors=None, savedir=None, averageAll = False):
+        # EDIT: Add the averageAll (T/F)
+        self.averageAll = averageAll
         self.datafilename = datafilename
         self.dumpfilename = dumpfilename
         if numberofcores is None:
             self.numberofcores = mp.cpu_count()
         else:
             self.numberofcores = numberofcores
-
+        # EDIT: Add optional save directory path
+        if savedir is None:
+            self.savedir = './'
+        else:
+            self.savedir = savedir
+        
         if whichdescriptors is None:
             self.whichdescriptors = 'all'
         else:
@@ -96,7 +104,8 @@ class pyl3dmd:
 
     # Create a function to save a group to a file
     def savedata(self, i):
-        fildename = 'Molecule_' + str(i + 1) + '.csv'
+        # EDIT: Add directory path
+        fildename = self.savedir + 'Molecule_' + str(i + 1) + '.csv'
         self.splits[i][1].to_csv(fildename, index=False)
 
 
@@ -122,11 +131,14 @@ class pyl3dmd:
         # Convert to dataframe
         df = pd.DataFrame.from_dict(ans)
 
-        # split dataframe using gropuby
-        self.splits = list(df.groupby("molecule"))
-
-        with mp.Pool(processes=self.numberofcores) as pool:
-            pool.map(self.savedata, items2)
+        # EDIT: Average data 
+        if self.averageAll == True:
+            df.describe().to_csv('AveragedAll.csv', index=False)
+        else: # ORIGINAL
+            # split dataframe using gropuby
+            self.splits = list(df.groupby("molecule"))
+            with mp.Pool(processes=self.numberofcores) as pool:
+                pool.map(self.savedata, items2)
 
         t2 = time.perf_counter()
         print(f'Finished in {t2 - t1} seconds')
@@ -217,3 +229,4 @@ class pyl3dmd:
             TCdes = descriptors1set.caltopologyconnectivitydescriptors(xyz, mass, bond, angle, dihedral, adjMat, disMat)
             res = {**others, **TCdes}
         return res
+
